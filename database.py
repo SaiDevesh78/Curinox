@@ -14,15 +14,10 @@ user_data = mydb["User_Data"]
 ai_meds_data = mydb["AI_Medical_Data"]
 user_cabinet_data = mydb["User_Cabinet_Data"]
 
-def save_scan(filename, expiry, month, year):
-    document = {
-        "filename": filename,
-        "expiry": expiry,
-        "month": month,
-        "year": year
-    }
+def save_scan(data):
+    doc = data
 
-    ai_meds_data.insert_one(document)
+    ai_meds_data.insert_one(doc)
 
 def get_all_scans():
     documents = ai_meds_data.find().sort("_id", -1)
