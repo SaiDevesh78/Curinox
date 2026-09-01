@@ -3,7 +3,7 @@ import os
 import re
 import sys
 import json
-
+import database
 from rapidocr import RapidOCR
 
 
@@ -1289,6 +1289,8 @@ else:
         "message": message
     }
 
+
+database.save_scan(final_result)
 
 # ============================================================
 # MACHINE-READABLE RESULT FOR FASTAPI
