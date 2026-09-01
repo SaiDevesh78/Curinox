@@ -1,0 +1,23 @@
+00:14:03 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:14:05 [hook] save-session: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:14:06 [extract] session 1f6baa22-0e4c-4581-abe4-2bb8d615bee7
+00:14:06 [extract] 12 exchanges (5 human)
+00:14:07 [haiku] calling (branch: Scanner_Patch_1.0)
+00:14:08 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:14:54 [tokens] tokens: 9+13509cache→3762out ($0.039707)
+00:14:56 [write] appended: ## 00:14 | Curinox_API
+00:14:56 [write] position → 180
+00:18:45 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:18:49 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:22:39 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:22:43 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:27:41 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:27:44 [hook] save-session: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:27:44 [extract] session 1f6baa22-0e4c-4581-abe4-2bb8d615bee7
+00:27:44 [extract] 14 exchanges (3 human)
+00:27:45 [haiku] calling (branch: Scanner_Patch_1.0)
+00:27:46 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:27:53 [hook] post-tool: PROJECT_DIR=Y:\egypt-crisis-dashboard-main\Curinox PIPELINE_DIR=C:/Users/Sai Devesh/.claude/plugins/cache/claude-plugins-official/remember/0.20.0 PYTHON=python3 REMEMBER_DIR=Y:\egypt-crisis-dashboard-main\Curinox/.remember
+00:28:06 [tokens] tokens: 9+13509cache→1283out ($0.023097)
+00:28:07 [write] appended: ## 00:27 | Scanner_Patch_1.0
+00:28:08 [write] position → 253
