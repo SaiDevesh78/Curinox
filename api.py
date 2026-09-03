@@ -34,9 +34,9 @@ app.add_middleware(
   "restrictions": []
 }"""
 
-@app.post("/check-email")
+@app.post("/signup-email-check")
 
-def check_email(data: dict = Body(...)):
+def signup_email_check(data: dict = Body(...)):
     global email
     email = data.get("email")
     if email is None:
@@ -46,9 +46,9 @@ def check_email(data: dict = Body(...)):
     else:
         return {"ok": True}
 
-@app.post("/check-password")
+@app.post("/signup-password-check")
 
-def check_password(data: dict = Body(...)):
+def signup_password_check(data: dict = Body(...)):
     global password
     password = data.get("password")
     if password is None:
@@ -65,9 +65,9 @@ def check_password(data: dict = Body(...)):
         else:
             return {"ok": True}
         
-@app.post("/profile")
+@app.post("/signup-profile-creation")
 
-def receive_profile(data: dict = Body(...)):
+def signup_profile_creation(data: dict = Body(...)):
     global user_id
     user_id = f"user_{user_data.count_documents({})+1}"
     data = {"user_id": user_id, "email": email, "password": password, **data}
@@ -75,6 +75,38 @@ def receive_profile(data: dict = Body(...)):
     print("Received profile:", data)
     return {"ok": True}
 
+#------------------------------------------------------------------------------------------
+
+"""{
+  "email": "sam@example.com",
+  "password": "securepassword",
+}"""
+
+@app.post("/login-email-check")
+
+def login_email_check(data: dict = Body(...)):
+    email = data.get("email")
+    if email is None:
+        return {"ok": False, "error": "Email is required"}
+    else:
+        return {"ok": True}
+
+@app.post("/login-password-check")
+
+def login_password_check(data: dict = Body(...)):
+    email = data.get("email")
+    password = data.get("password")
+    user = user_data.find_one({"email": email}, {"email": 1, "password": 1, "user_id": 1, "_id": 0})
+    password_test = user.get("password")
+    global user_id
+    user_id = user.get("user_id")
+    if password is None:
+        return {"ok": False, "error": "Password is required"}
+    elif password != password_test:
+        return {"ok": False, "error": "Password is inncorrect"}
+    else:
+        return {"ok": True}
+        
 #------------------------------------------------------------------------------------------
 """{
   "user_id": "user_1",

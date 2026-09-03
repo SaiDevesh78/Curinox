@@ -1,11 +1,7 @@
 from fastapi import FastAPI
 
 from routes.scan import router as scan_router
-from database import initialize_database
-
-
-initialize_database()
-
+import database
 
 app = FastAPI(
     title="Medicine Authentication API",
