@@ -82,31 +82,47 @@ def signup_profile_creation(data: dict = Body(...)):
   "password": "securepassword",
 }"""
 
-@app.post("/login-email-check")
-
-def login_email_check(data: dict = Body(...)):
-    email = data.get("email")
-    if email is None:
-        return {"ok": False, "error": "Email is required"}
-    else:
-        return {"ok": True}
-
-@app.post("/login-password-check")
+@app.post("/login-check")
 
 def login_password_check(data: dict = Body(...)):
     email = data.get("email")
     password = data.get("password")
+    
+    if not email or not password:
+        return {"ok": False, "error": "Email and password are required"}
+    
     user = user_data.find_one({"email": email}, {"email": 1, "password": 1, "user_id": 1, "_id": 0})
+    
+    if user is None:
+        return {"ok": False, "error": "User with this email does not exist"}
+    
     password_test = user.get("password")
-    global user_id
-    user_id = user.get("user_id")
+
     if password is None:
         return {"ok": False, "error": "Password is required"}
     elif password != password_test:
-        return {"ok": False, "error": "Password is inncorrect"}
+        return {"ok": False, "error": "Password is incorrect"}
     else:
-        return {"ok": True}
-        
+        return {"ok": True, "user_id": user.get("user_id")}
+
+@app.get("/get-user-data")
+
+def get_user_data(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    if not user_id:
+        return {"ok": False, "error": "user_id is required"}
+    profile = user_data.find_one({"user_id": user_id}, {"_id": 0})
+    if profile is None:
+        return {"ok": False, "error": "User not found"}
+    reminders = list(reminder_data.find({"user_id": user_id}, {"_id": 0}))
+    cabinet_items = list(medical_cabinet_data.find({"user_id": user_id}, {"_id": 0}))
+    return {
+        "ok": True,
+        "profile": profile,
+        "reminders": reminders,
+        "medical_cabinet": cabinet_items
+    }
+
 #------------------------------------------------------------------------------------------
 """{
   "user_id": "user_1",
