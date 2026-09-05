@@ -6,17 +6,17 @@ import pymongo
 
 load_dotenv()
 MONGODB_URI1 = "mongodb+srv://Work_Group_User:Koi4Ou9QN3p5TdMW@central-db.cc9nwzn.mongodb.net/?retryWrites=true&w=majority"
-MONGODB_URI2 = "mongodb+srv://samarthshetty010:OJpIVovdzk6pr0rg@curionixcluster.w7eyivy.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_URI2 = "mongodb+srv://workgroupuser:ECQs2woWiVCyOeZR@curionixcluster.w7eyivy.mongodb.net/"
 MONGODB_DATABASE1 = "Curinox_Centeral_DB"
-MONGODB_DATABASE2 = "Curinox_Centeral_DB"
+MONGODB_DATABASE2 = "Curionix"
 client1 = pymongo.MongoClient(MONGODB_URI1)
 client2 = pymongo.MongoClient(MONGODB_URI2)
 mydb1 = client1[MONGODB_DATABASE1]
 mydb2 = client2[MONGODB_DATABASE2]
 user_data = mydb1["User_Data"]
 reminder_data = mydb1["Reminder_Data"]
-medical_cabinet_data = mydb2["Medical_Cabinet_Data"]#Add Coolection name like medical_cabient_data
-medicine_data = mydb2["Medicine_Data"]#Add Coolection name like medicine_data this is for those 6 tablets u saved
+medical_cabinet_data = mydb1["User_Cabinet_Data"] #Add Coolection name like medical_cabient_data
+medicine_data = mydb2["Medicine_Master"] #Add Coolection name like medicine_data this is for those 6 tablets u saved
 app = FastAPI()
 
 app.add_middleware(
@@ -41,25 +41,16 @@ app.add_middleware(
   "restrictions": []
 }"""
 
-@app.post("/signup-email-check")
-
+@app.post("/signup-check")
 def signup_email_check(data: dict = Body(...)):
-    global email
     email = data.get("email")
+    password = data.get("password")
+
     if email is None:
         return {"ok": False, "error": "Email is required"}
-    elif user_data.find_one({"email": email}) != None:
-        return {"ok": False, "error": "User with this email already exists"}
-    else:
-        return {"ok": True}
-
-@app.post("/signup-password-check")
-
-def signup_password_check(data: dict = Body(...)):
-    global password
-    password = data.get("password")
     if password is None:
         return {"ok": False, "error": "Password is required"}
+    
     else:
         if len(password) < 8:
             return {"ok": False, "error": "Password must be at least 8 characters long"}
@@ -69,18 +60,14 @@ def signup_password_check(data: dict = Body(...)):
             return {"ok": False, "error": "Password must contain at least one uppercase letter"}
         elif not any(char.islower() for char in password):
             return {"ok": False, "error": "Password must contain at least one lowercase letter"}
+        elif user_data.find_one({"email": email}) != None:
+            return {"ok": False, "error": "User with this email already exists"}
         else:
-            return {"ok": True}
-        
-@app.post("/signup-profile-creation")
-
-def signup_profile_creation(data: dict = Body(...)):
-    global user_id
-    user_id = f"user_{user_data.count_documents({})+1}"
-    data = {"user_id": user_id, "email": email, "password": password, **data}
-    user_data.insert_one(data)
-    print("Received profile:", data)
-    return {"ok": True}
+            user_id = f"user_{user_data.count_documents({})+1}"
+            data = {"user_id": user_id, "email": email, "password": password, **data}
+            user_data.insert_one(data)
+            data.pop("_id", None)
+            return {"ok": True,  "user_id":user_id}
 
 #------------------------------------------------------------------------------------------
 
@@ -159,7 +146,6 @@ def receive_cabinet(data: dict = Body(...)):
     cabinet_item_id = f"cab_{medical_cabinet_data.count_documents({'user_id': user_id})+1}"
     data = {"user_id": user_id, "cabinet_item_id": cabinet_item_id, **data}
     medical_cabinet_data.insert_one(data)
-    print("Received cabinet:", data)
     return {"ok": True}
 
 #------------------------------------------------------------------------------------------
@@ -239,7 +225,7 @@ def scan_confirmation(data: dict = Body(...)):
     medicine_id = data.get("medicine_id")
     # Need the structure for this and what all you want to add to the cabinet
     # Here i am just getting the medicine name from ur db
-    medicine_info = medicine_data.find_one({"medicine_id": medicine_id}, {"_id": 0, "tablet_name": 1, "generic_name": 1})
+    medicine_info = medicine_data.find_one({"medicine_id": medicine_id}, {"_id": 0, "brand_name": 1})
     scan_session_id = data.get("scan_session_id")
     expiry_date = data.get("expiry_date")
     user_id = data.get("user_id")
@@ -247,8 +233,7 @@ def scan_confirmation(data: dict = Body(...)):
         "user_id": user_id,
         "medicine_id": medicine_id,
         "scan_session_id": scan_session_id,
-        "tablet_name": medicine_info.get("tablet_name"),
-        "generic_name": medicine_info.get("generic_name"),
+        "brand_name": medicine_info.get("brand_name"),
         "expiry_date": expiry_date,
     }
     medical_cabinet_data.insert_one(data)
