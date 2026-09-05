@@ -5,17 +5,18 @@ from dotenv import load_dotenv
 import pymongo
 
 load_dotenv()
-MONGODB_URI = os.getenv("MONGODB_URI")
-MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
-
-client1 = pymongo.MongoClient(MONGODB_URI)#Download env file as well or it wont work
-client2 = pymongo.MongoClient()#Add url of ur db samarth
-mydb1 = client1[MONGODB_DATABASE]
-mydb2 = client2[""] #Add Database 
+MONGODB_URI1 = "mongodb+srv://Work_Group_User:Koi4Ou9QN3p5TdMW@central-db.cc9nwzn.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_URI2 = "mongodb+srv://samarthshetty010:OJpIVovdzk6pr0rg@curionixcluster.w7eyivy.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_DATABASE1 = "Curinox_Centeral_DB"
+MONGODB_DATABASE2 = "Curinox_Centeral_DB"
+client1 = pymongo.MongoClient(MONGODB_URI1)
+client2 = pymongo.MongoClient(MONGODB_URI2)
+mydb1 = client1[MONGODB_DATABASE1]
+mydb2 = client2[MONGODB_DATABASE2]
 user_data = mydb1["User_Data"]
 reminder_data = mydb1["Reminder_Data"]
-medical_cabinet_data = mydb2[""]#Add Coolection name like medical_cabient_data
-medicine_data = mydb2[""]#Add Coolection name like medicine_data this is for those 6 tablets u saved
+medical_cabinet_data = mydb2["Medical_Cabinet_Data"]#Add Coolection name like medical_cabient_data
+medicine_data = mydb2["Medicine_Data"]#Add Coolection name like medicine_data this is for those 6 tablets u saved
 app = FastAPI()
 
 app.add_middleware(
