@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
-from passlib.context import CryptContext
+import bcrypt
 from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
@@ -23,7 +23,6 @@ medical_cabinet_data = mydb1["User_Cabinet_Data"]
 temp_data = mydb1["Temp_Data"]
 temp_data.create_index("created_at", expireAfterSeconds=300)
 medicine_data = mydb2["Medicine_Master"]
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 app = FastAPI()
 
 app.add_middleware(
@@ -78,9 +77,9 @@ def signup_check(data: dict = Body(...)):
         elif user_data.find_one({"email": email}) != None:
             return {"ok": False, "error": "User with this email already exists"}
         else:
-            password = pwd_context.hash(password)
+            password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             user_id = f"user_{uuid.uuid4().hex[:8]}"
-            data = {"user_id": user_id, "email": email, "password": password, **data}
+            data = {"user_id": user_id, "email": email, "password": password}
             user_data.insert_one(data)
             data.pop("_id", None)
             return {"ok": True,  "user_id":user_id}
@@ -126,7 +125,7 @@ def login_password_check(data: dict = Body(...)):
 
     if password is None:
         return {"ok": False, "error": "Password is required"}
-    if not pwd_context.verify(password, password_test):
+    if not bcrypt.checkpw(password.encode('utf-8'), password_test.encode('utf-8')):
         return {"ok": False, "error": "Password is incorrect"}
 
     return {"ok": True, "user_id": user.get("user_id")}
@@ -276,16 +275,21 @@ def scan_confirmation(data: dict = Body(...)):
         return {"ok": False, "error": "session is not found or expired"}
     medicine_id = data_temp.get("medicine_id")
     medicine_info = medicine_data.find_one({"medicine_id": medicine_id}, {"_id": 0, "brand_name": 1})
+    if medicine_info:
+        brand_name = medicine_info.get("brand_name") 
+    else: 
+        brand_name = "Unknown"
     expiry_date = data_temp.get("expiry_date")
     cabinet_iteam_id = f"cab_{uuid.uuid4().hex[:5]}"
     data = {
         "user_id": user_id,
         "medicine_id": medicine_id,
         "cabinet_item_id": cabinet_iteam_id,
-        "brand_name": medicine_info.get("brand_name"),
+        "brand_name": brand_name,
         "expiry_date": expiry_date,
     }
     medical_cabinet_data.insert_one(data)
+    temp_data.delete_one({"user_id": user_id, "scan_session_id": scan_session_id})
     return {"ok": True, "message": "Medicine details confirmed and updated successfully."}
 
 #------------------------------------------------------------------------------------------
