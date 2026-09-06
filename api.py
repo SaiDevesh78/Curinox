@@ -1,22 +1,29 @@
 from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
+from passlib.context import CryptContext
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 import pymongo
+import uuid
 
 load_dotenv()
-MONGODB_URI1 = "mongodb+srv://Work_Group_User:Koi4Ou9QN3p5TdMW@central-db.cc9nwzn.mongodb.net/?retryWrites=true&w=majority"
-MONGODB_URI2 = "mongodb+srv://workgroupuser:ECQs2woWiVCyOeZR@curionixcluster.w7eyivy.mongodb.net/"
-MONGODB_DATABASE1 = "Curinox_Centeral_DB"
-MONGODB_DATABASE2 = "Curionix"
+
+MONGODB_URI1 = f"mongodb+srv://{os.getenv('MONGODB_USER1')}:{os.getenv('MONGODB_PASSWORD1')}@central-db.cc9nwzn.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_URI2 = f"mongodb+srv://{os.getenv('MONGODB_USER2')}:{os.getenv('MONGODB_PASSWORD2')}@curionixcluster.w7eyivy.mongodb.net/"
+MONGODB_DATABASE1 = os.getenv('MONGODB_DATABASE1')
+MONGODB_DATABASE2 = os.getenv('MONGODB_DATABASE2')
 client1 = pymongo.MongoClient(MONGODB_URI1)
 client2 = pymongo.MongoClient(MONGODB_URI2)
 mydb1 = client1[MONGODB_DATABASE1]
 mydb2 = client2[MONGODB_DATABASE2]
 user_data = mydb1["User_Data"]
 reminder_data = mydb1["Reminder_Data"]
-medical_cabinet_data = mydb1["User_Cabinet_Data"] #Add Coolection name like medical_cabient_data
-medicine_data = mydb2["Medicine_Master"] #Add Coolection name like medicine_data this is for those 6 tablets u saved
+medical_cabinet_data = mydb1["User_Cabinet_Data"]
+temp_data = mydb1["Temp_Data"]
+temp_data.create_index("created_at", expireAfterSeconds=300)
+medicine_data = mydb2["Medicine_Master"]
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 app = FastAPI()
 
 app.add_middleware(
@@ -25,6 +32,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#------------------------------------------------------------------------------------------
+# HEALTH CHECK (I ADDED FOR FUN)
+#------------------------------------------------------------------------------------------
+
+@app.get("/")
+def root_health_check():
+    return {"status": "online", "system": "Curinox API"}
 
 #------------------------------------------------------------------------------------------
 # USER SIGNUP AND LOGIN API PART FROM HERE
@@ -42,7 +57,7 @@ app.add_middleware(
 }"""
 
 @app.post("/signup-check")
-def signup_email_check(data: dict = Body(...)):
+def signup_check(data: dict = Body(...)):
     email = data.get("email")
     password = data.get("password")
 
@@ -63,11 +78,28 @@ def signup_email_check(data: dict = Body(...)):
         elif user_data.find_one({"email": email}) != None:
             return {"ok": False, "error": "User with this email already exists"}
         else:
-            user_id = f"user_{user_data.count_documents({})+1}"
+            password = pwd_context.hash(password)
+            user_id = f"user_{uuid.uuid4().hex[:8]}"
             data = {"user_id": user_id, "email": email, "password": password, **data}
             user_data.insert_one(data)
             data.pop("_id", None)
             return {"ok": True,  "user_id":user_id}
+
+#------------------------------------------------------------------------------------------
+
+@app.post("/new-user-data")
+def new_user_data(data: dict = Body(...)):
+    name = data.get("name")
+    age = data.get("age")
+    height = data.get("height")
+    weight = data.get("weight")
+    goal = data.get("goal")
+    user_id = data.get("user_id")
+    if not user_id: 
+        return {"ok": False, "error": "user_id is not found in the request body"}
+    newdata = {"name": name, "age": age, "height": height, "weight": weight, "goal": goal}
+    user_data.update_one({"user_id": user_id}, {"$set": newdata})
+    return {"ok": True, "message": "User data added successfully"}
 
 #------------------------------------------------------------------------------------------
 
@@ -94,10 +126,10 @@ def login_password_check(data: dict = Body(...)):
 
     if password is None:
         return {"ok": False, "error": "Password is required"}
-    elif password != password_test:
+    if not pwd_context.verify(password, password_test):
         return {"ok": False, "error": "Password is incorrect"}
-    else:
-        return {"ok": True, "user_id": user.get("user_id")}
+
+    return {"ok": True, "user_id": user.get("user_id")}
 
 #------------------------------------------------------------------------------------------
 
@@ -143,7 +175,7 @@ def receive_cabinet(data: dict = Body(...)):
     user_id = data.get("user_id")
     if not user_id:
         return {"ok": False, "error": "user_id is not found in the request body"}
-    cabinet_item_id = f"cab_{medical_cabinet_data.count_documents({'user_id': user_id})+1}"
+    cabinet_item_id = f"cab_{uuid.uuid4().hex[:5]}"
     data = {"user_id": user_id, "cabinet_item_id": cabinet_item_id, **data}
     medical_cabinet_data.insert_one(data)
     return {"ok": True}
@@ -151,6 +183,7 @@ def receive_cabinet(data: dict = Body(...)):
 #------------------------------------------------------------------------------------------
 
 """{
+  "user_id: user_id,
   "ok": true,
   "stage": "medicine_detection",
   "scan_session_id": "scan_123",
@@ -160,7 +193,6 @@ def receive_cabinet(data: dict = Body(...)):
   "next_step": "TURN_MEDICINE_OVER"
 }"""
 
-#Assuming that the code is already assigning a medicine_id and scan_id
 @app.post("/scan/medicine")
 def scan_medicine(data: dict = Body(...)):
     if data.get("ok") is not True:
@@ -171,12 +203,16 @@ def scan_medicine(data: dict = Body(...)):
         return {"ok": False, "error": "Medicine not found in scan, Please Retry"}
     if data.get("confidence") < 0.8:
         return {"ok": False, "error": "Medicine identification is uncertain. Please reposition the medicine and try again"}
-#For next stage resend the scan and medicine_id for the backend to add that
-    return {"ok": True, "medicine_id": data.get("medicine_id"), "scan_session_id": data.get("scan_session_id"), "message": "Medicine identified successfully. Please turn the medicine over for further processing."}
+    medicine_id = data.get("medicine_id")
+    scan_session_id = data.get("scan_session_id")
+    user_id = data.get("user_id")
+    temp_data.insert_one({"created_at": datetime.now(timezone.utc), "user_id":user_id, "medicine_id": medicine_id, "scan_session_id": scan_session_id})
+    return {"ok": True, "message": "Medicine identified successfully. Please turn the medicine over for further processing."}
 
 #------------------------------------------------------------------------------------------
 
 """{
+  "user_id": user_id
   "ok": true,
   "stage": "expiry_detection",
   "scan_session_id": "scan_123" -- same as the previous scan session id,
@@ -198,7 +234,15 @@ def scan_expiry(data: dict = Body(...)):
         return {"ok": False, "error": "Expiry date not found in scan, Please Retry"}
     if data.get("confidence") < 0.8:
         return {"ok": False, "error": "Expiry date identification is uncertain. Please reposition the medicine and try again"}
-    return {"ok": True, "medicine_id": data.get("medicine_id"), "scan_session_id": data.get("scan_session_id"), "expiry_date": data.get("expiry_date"), "message": "Expiry date identified successfully. Please confirm the details."}
+    user_id = data.get("user_id")
+    scan_session_id = data.get("scan_session_id")
+    data_temp = {"expiry_date": data.get("expiry_date"), "created_at": datetime.now(timezone.utc)}
+    if not scan_session_id or not user_id:
+        return {"ok": False, "error": "scan_session_id and user_id are required"}
+    test = temp_data.update_one({"user_id": user_id, "scan_session_id": scan_session_id}, {"$set": data_temp})
+    if test.matched_count == 0:
+        return {"ok": False, "error": "Scan session expired or not found"}
+    return {"ok": True, "message": "Expiry date identified successfully. Please confirm the details."}
 
 #------------------------------------------------------------------------------------------
 
@@ -221,18 +265,23 @@ def scan_confirmation(data: dict = Body(...)):
         return {"ok": False, "error": "Invalid stage, Please Retry"}
     if data.get("confirmation_status") is not True:
         return {"ok": False, "error": "Confirmation status is false, Please Retry"}
-    # Assuming that the medicine_id and expiry_date are already provided in the request body
-    medicine_id = data.get("medicine_id")
-    # Need the structure for this and what all you want to add to the cabinet
-    # Here i am just getting the medicine name from ur db
-    medicine_info = medicine_data.find_one({"medicine_id": medicine_id}, {"_id": 0, "brand_name": 1})
-    scan_session_id = data.get("scan_session_id")
-    expiry_date = data.get("expiry_date")
     user_id = data.get("user_id")
+    if not user_id:
+        return {"ok": False, "error": "user_id is required"}
+    scan_session_id = data.get("scan_session_id")
+    if not scan_session_id:
+        return {"ok": False, "error": "scan_session_id is required"}
+    data_temp = temp_data.find_one({"user_id": user_id, "scan_session_id": scan_session_id}, {"_id": 0})
+    if not data_temp:
+        return {"ok": False, "error": "session is not found or expired"}
+    medicine_id = data_temp.get("medicine_id")
+    medicine_info = medicine_data.find_one({"medicine_id": medicine_id}, {"_id": 0, "brand_name": 1})
+    expiry_date = data_temp.get("expiry_date")
+    cabinet_iteam_id = f"cab_{uuid.uuid4().hex[:5]}"
     data = {
         "user_id": user_id,
         "medicine_id": medicine_id,
-        "scan_session_id": scan_session_id,
+        "cabinet_item_id": cabinet_iteam_id,
         "brand_name": medicine_info.get("brand_name"),
         "expiry_date": expiry_date,
     }
@@ -294,7 +343,7 @@ def search_medicines(query: str):
     regex_pattern = {"$regex": query, "$options": "i"}
     results = list(medicine_data.find({
         "$or": [
-            {"tablet_name": regex_pattern},
+            {"brand_name": regex_pattern},
             {"generic_name": regex_pattern},
             {"search_keywords": regex_pattern}
         ]
@@ -363,26 +412,26 @@ def update_reminder(reminder_id: str, data: dict = Body(...)):
         return {"ok": False, "error": "user id is required"}
     """ 
     Things they can update for now:
-    "tablet_name": "Vitamin D",
+    "brand_name": "Vitamin D",
     "time": "08:00",
     "frequency": "daily"
     """
-    tablet_name = data.get("tablet_name")
+    brand_name = data.get("brand_name")
     time = data.get("time")
     frequency = data.get("frequency")
     update = {}
-    if tablet_name:
-        update["tablet_name"] = tablet_name
+    if brand_name:
+        update["brand_name"] = brand_name
     if time:
         update["time"] = time
     if frequency:
         update["frequency"] = frequency
     if update:
-        update = reminder_data.update_one(
+        result = reminder_data.update_one(
             {"reminder_id": reminder_id, "user_id": user_id},
             {"$set": update})
-    if update.matched_count == 0:
-        return {"ok": False, "error": "Reminder not found"}
+        if result.matched_count == 0:
+            return {"ok": False, "error": "Reminder not found"}
     
     reminder = reminder_data.find_one({"reminder_id": reminder_id, "user_id": user_id}, {"_id": 0})
     # If u want to show user the updated reminder i have also sent that back just in case
