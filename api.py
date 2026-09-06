@@ -19,6 +19,7 @@ mydb1 = client1[MONGODB_DATABASE1]
 mydb2 = client2[MONGODB_DATABASE2]
 user_data = mydb1["User_Data"]
 reminder_data = mydb1["Reminder_Data"]
+missed_reminder = mydb1["Missed_Reminder_Data"]
 medical_cabinet_data = mydb1["User_Cabinet_Data"]
 temp_data = mydb1["Temp_Data"]
 temp_data.create_index("created_at", expireAfterSeconds=300)
@@ -155,6 +156,79 @@ def get_user_data(user_id: str):
 def logout():
     # This is justt name sake as our api is statless
     return {"ok": True, "message": "Logged out successfully"}
+
+#------------------------------------------------------------------------------------------
+# MEMBER ADDITON INTO FAMILY
+#------------------------------------------------------------------------------------------
+
+@app.post("/family-code-generation")
+def family_code_generation(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    if not user_id:
+        return  {"ok": False, "error": "user_id Not Given"}
+    code = uuid.uuid4().hex[:5]
+    content = {
+        "user_id": user_id,
+        "member": None,
+        "code": code,
+        "verified": False,
+        "created_at": datetime.now(timezone.utc)
+    }
+    temp_data.insert_one(content)
+    return {"ok": True, "message": "Code Generated, Please add from other device", "code": code}
+
+#------------------------------------------------------------------------------------------
+
+@app.post("/family-code-validation")
+def family_code_vailidation(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    code = data.get("code")
+    if not user_id or not code:
+        return {"ok": False, "error": "user_id and code are required"}
+    testcode = temp_data.find_one({"code": code}, {"_id": 0, "code": 1})
+    if not testcode:
+        return {"ok": False, "error": "Code Not Found or Expired"}
+    if code == testcode.get("code"):
+        verified = {"verified": True, "member": user_id, "created_at": datetime.now(timezone.utc)}
+    else:
+        verified = {"verified": False}
+    temp_data.update_one({"code": code}, {"$set": verified})
+    return {"ok": True, "message": "You have been added"}
+
+#------------------------------------------------------------------------------------------
+
+@app.get("/family-code-status")
+def family_code_status(user_id: str):
+    if not user_id:
+        return {"ok": False, "error": "user_id is required"}
+    testcode = temp_data.find_one({"user_id": user_id}, {"_id": 0, "verified": 1, "member": 1})
+    if not testcode:
+        return {"ok": False, "error": "Code Not Found or Expired"}
+    if testcode.get("verified") == True:
+        member = {"member":testcode.get("member")}
+        if member:
+            user_data.update_one({"user_id": user_id}, {"$set": member})
+            temp_data.delete_one({"user_id": user_id})
+            return {"ok": True, "message": "Member Added Sucessfully"}
+        else:
+            return {"ok": False, "error": "Member User ID not found"}
+    else:
+        return {"ok": False, "error": "Member has not accepted your request yet"}
+
+#------------------------------------------------------------------------------------------
+
+@app.get("/reminder-member-data")
+def reminder_member_data(user_id: str):
+    if not user_id:
+        return {"ok": False, "error": "user_id is required"}
+    member = user_data.find_one({"user_id": user_id}, {"_id": 0, "member": 1})
+    if not member:
+        return {"ok": False, "error": "member_id not found"}
+    member = member.get("member")
+    missed_data = missed_reminder.find_one({"user_id": member}, {"_id":0})
+    if not missed_data:
+        return {"ok": False, "message": "Member has no missed medicins"}
+    return {"ok": True, "missed_reminders": missed_data}
 
 #------------------------------------------------------------------------------------------
 # MEDICAL CABINET API PART FROM HERE
@@ -404,6 +478,21 @@ def get_reminders(user_id: str):
     rems = list(reminder_data.find({"user_id": user_id}, {"_id": 0}))
     # For now im just sending all the data, we can specify what we want after testing
     return {"ok": True, "reminders": rems}
+
+#------------------------------------------------------------------------------------------
+
+@app.post("/reminders-update")
+def reminder_update(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    cabient_id = data.get("cabinet_item_id")
+    taken = data.get("taken") # Give True if taken False if not
+    if not user_id or not cabient_id:
+        return {"ok": False, "error": "user_id or cabinet_id is required"}
+    if taken == False:
+        missed_reminder.update_one({"user_id": user_id}, {"$push": {"Missed_Reminders":{"cabinet_item_id": cabient_id, "Date_Time": datetime.now(timezone.utc), "taken": False}}}, upsert=True)
+        return {"ok": True, "taken": False}
+    else:
+        return {"ok": True, "taken": True}
 
 #------------------------------------------------------------------------------------------
 
