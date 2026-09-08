@@ -484,12 +484,12 @@ def get_reminders(user_id: str):
 @app.post("/reminders-update")
 def reminder_update(data: dict = Body(...)):
     user_id = data.get("user_id")
-    cabient_id = data.get("cabinet_item_id")
+    cabinet_id = data.get("cabinet_item_id")
     taken = data.get("taken") # Give True if taken False if not
-    if not user_id or not cabient_id:
+    if not user_id or not cabinet_id:
         return {"ok": False, "error": "user_id or cabinet_id is required"}
     if taken == False:
-        missed_reminder.update_one({"user_id": user_id}, {"$push": {"Missed_Reminders":{"cabinet_item_id": cabient_id, "Date_Time": datetime.now(timezone.utc), "taken": False}}}, upsert=True)
+        missed_reminder.update_one({"user_id": user_id}, {"$push": {"Missed_Reminders":{"cabinet_item_id": cabinet_id, "Date_Time": datetime.now(timezone.utc), "taken": False}}}, upsert=True)
         return {"ok": True, "taken": False}
     else:
         return {"ok": True, "taken": True}
