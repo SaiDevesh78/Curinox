@@ -1,0 +1,7 @@
+import tf_keras as keras
+
+# Load the model directly from your .h5 file
+model = keras.models.load_model("keras_model.h5")
+
+# Save it to the native Keras format for future use
+model.save("modern_model.keras")
