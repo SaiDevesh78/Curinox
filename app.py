@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 
-<<<<<<< HEAD
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Query
 from pydantic import BaseModel
 
@@ -19,10 +18,6 @@ class ConfirmRequest(BaseModel):
     user_id: str
     confirmed: bool
 
-=======
-from routes.scan import router as scan_router
-import database
->>>>>>> 3dce7f5423be643913a0639041f4436643956ab0
 
 def get_last_day_of_month(year: int, month: int) -> int:
     _, last_day = calendar.monthrange(year, month)
