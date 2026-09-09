@@ -25,7 +25,10 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
 # ============================================================
 try:
     import database
-except ImportError:
+except Exception:
+    # Optional: only used by the __main__ CLI runner below. The FastAPI
+    # app never touches this, so a missing module or unset MONGODB_URI
+    # must not block importing the scanner.
     database = None
 
 # ============================================================

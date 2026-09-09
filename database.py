@@ -10,7 +10,15 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 CENTRAL_DB_NAME = os.getenv("MONGODB_DATABASE", "Curinox_Centeral_DB")
 MEDICINE_DB_NAME = os.getenv("MEDICINE_DATABASE", "Curionix")
 
-client = pymongo.MongoClient(MONGODB_URI)
+if not MONGODB_URI:
+    raise RuntimeError(
+        "MONGODB_URI is not set. Create a .env file in the project root "
+        "with your MongoDB connection string (see .env.example)."
+    )
+
+# Fail fast (a few seconds) instead of pymongo's default 30s hang when the
+# database is unreachable or misconfigured.
+client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
 
 # Connect to both database namespaces on Atlas
 central_db = client[CENTRAL_DB_NAME]
