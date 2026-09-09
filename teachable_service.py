@@ -25,11 +25,16 @@ _class_names = []
 
 def _patch_legacy_h5_model() -> str:
     """Modifies the legacy H5 file to strip modern Keras compatibility blockers."""
-    if os.path.exists(PATCHED_MODEL_PATH):
-        return PATCHED_MODEL_PATH
-
     if not os.path.exists(MODEL_PATH):
         raise FileNotFoundError(f"Model file not found: {MODEL_PATH}")
+
+    # Regenerate the patched copy whenever the source model is newer, so a
+    # retrained/re-exported model.h5 doesn't silently keep using a stale cache.
+    if (
+        os.path.exists(PATCHED_MODEL_PATH)
+        and os.path.getmtime(PATCHED_MODEL_PATH) >= os.path.getmtime(MODEL_PATH)
+    ):
+        return PATCHED_MODEL_PATH
 
     shutil.copy2(MODEL_PATH, PATCHED_MODEL_PATH)
 
@@ -100,6 +105,21 @@ def load_teachable_model():
         _class_names = []
 
 
+def _center_crop_to_square(image: np.ndarray) -> np.ndarray:
+    """Crop the largest centered square, matching Teachable Machine's
+    own ImageOps.fit() preprocessing. A plain resize would stretch
+    non-square photos and distort the medicine box the model was
+    trained to recognize."""
+    height, width = image.shape[:2]
+    if height == width:
+        return image
+
+    side = min(height, width)
+    top = (height - side) // 2
+    left = (width - side) // 2
+    return image[top: top + side, left: left + side]
+
+
 def predict_medicine(image_path: str) -> dict:
     load_teachable_model()
 
@@ -120,8 +140,10 @@ def predict_medicine(image_path: str) -> dict:
         # 1. Convert BGR (OpenCV default) to RGB (Teachable Machine standard)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # 2. Resize directly to 224x224 (Standard Teachable Machine Input)
-        image_resized = cv2.resize(image_rgb, (224, 224), interpolation=cv2.INTER_AREA)
+        # 2. Center-crop to square, then resize to 224x224 (matches
+        # Teachable Machine's ImageOps.fit inference preprocessing)
+        image_square = _center_crop_to_square(image_rgb)
+        image_resized = cv2.resize(image_square, (224, 224), interpolation=cv2.INTER_AREA)
 
         # 3. Normalize image array (-1.0 to 1.0)
         image_array = np.asarray(image_resized, dtype=np.float32)
